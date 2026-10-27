@@ -1,801 +1,904 @@
 <!DOCTYPE html>
-<html lang="zh-TW">
+<html lang="zh-TW" class="dark">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>班級午餐訂餐系統</title>
+    <title>Neon Breakout Arcade | 打磚塊街機遊戲</title>
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- FontAwesome 圖示庫 CDN -->
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        arcade: ['Courier New', 'monospace']
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- FontAwesome for Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <!-- Google Fonts Inter & Noto Sans TC -->
-    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
+        /* Custom Arcade Styles & Glow Effects */
         body {
-            font-family: 'Noto Sans TC', sans-serif;
-            background-color: #f8fafc;
+            background-color: #090d16;
+            color: #f3f4f6;
+            user-select: none;
+            overflow-x: hidden;
         }
-        /* 自訂捲動條風格 */
-        ::-webkit-scrollbar {
-            width: 6px;
-            height: 6px;
+        .neon-border {
+            box-shadow: 0 0 15px rgba(59, 130, 246, 0.5), inset 0 0 15px rgba(59, 130, 246, 0.2);
         }
-        ::-webkit-scrollbar-track {
-            background: #f1f5f9;
+        .neon-text {
+            text-shadow: 0 0 10px rgba(59, 130, 246, 0.8), 0 0 20px rgba(59, 130, 246, 0.4);
         }
-        ::-webkit-scrollbar-thumb {
-            background: #cbd5e1;
-            border-radius: 4px;
+        .neon-text-pink {
+            text-shadow: 0 0 10px rgba(236, 72, 153, 0.8), 0 0 20px rgba(236, 72, 153, 0.4);
         }
-        ::-webkit-scrollbar-thumb:hover {
-            background: #94a3b8;
+        /* Canvas container scaling */
+        #gameCanvas {
+            background: radial-gradient(circle at center, #111827 0%, #030712 100%);
+            touch-action: none;
+            display: block;
         }
-        /* Toast 畫面上浮動畫 */
-        @keyframes slideUp {
-            from { transform: translateY(100%); opacity: 0; }
-            to { transform: translateY(0); opacity: 1; }
+        .arcade-btn {
+            background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+            transition: all 0.2s ease;
+            box-shadow: 0 4px 14px rgba(59, 130, 246, 0.4);
         }
-        .animate-slide-up {
-            animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        .arcade-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(59, 130, 246, 0.6);
+        }
+        .arcade-btn:active {
+            transform: translateY(1px);
         }
     </style>
 </head>
-<body class="text-slate-800 min-h-screen flex flex-col">
+<body class="min-h-screen flex flex-col items-center justify-between p-2 sm:p-4">
 
-    <!-- 頂部導覽頁首 -->
-    <header class="bg-indigo-600 text-white shadow-md sticky top-0 z-30">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3.5 flex flex-wrap items-center justify-between gap-3">
-            <div class="flex items-center space-x-3">
-                <div class="bg-white/10 p-2.5 rounded-xl backdrop-blur-sm">
-                    <i class="fa-solid font-bold fa-utensils text-2xl text-amber-300"></i>
-                </div>
-                <div>
-                    <h1 class="text-xl sm:text-2xl font-bold tracking-tight">國立高中 班級午餐訂餐系統</h1>
-                    <p class="text-xs text-indigo-200">每日午餐小老師專用統計與結帳工具</p>
-                </div>
+    <!-- Header / HUD Bar -->
+    <header class="w-full max-w-4xl bg-slate-900/80 backdrop-blur-md border border-slate-800 rounded-2xl p-3 sm:p-4 shadow-2xl flex flex-wrap items-center justify-between gap-4 mb-3">
+        <div class="flex items-center space-x-3">
+            <div class="w-10 h-10 rounded-xl bg-blue-600/20 border border-blue-500/50 flex items-center justify-center text-blue-400 font-bold text-xl neon-text">
+                <i class="fa-solid fa-gamepad"></i>
             </div>
-            
-            <div class="flex items-center space-x-2 text-sm bg-indigo-700/60 px-3.5 py-1.5 rounded-lg border border-indigo-500/30">
-                <i class="fa-regular fa-calendar text-indigo-300"></i>
-                <span id="currentDateDisplay" class="font-medium">2026/10/27</span>
+            <div>
+                <h1 class="font-bold text-lg sm:text-xl tracking-wider text-white neon-text">NEON BREAKOUT</h1>
+                <p class="text-xs text-slate-400">Classic Arcade Edition</p>
             </div>
+        </div>
+
+        <!-- Stats Container -->
+        <div class="flex items-center gap-3 sm:gap-6 text-sm font-arcade">
+            <div class="bg-slate-800/80 border border-slate-700/60 px-3 py-1.5 rounded-xl flex flex-col items-center">
+                <span class="text-xs text-slate-400 uppercase">Score</span>
+                <span id="scoreVal" class="text-amber-400 font-bold text-base sm:text-lg">0</span>
+            </div>
+            <div class="bg-slate-800/80 border border-slate-700/60 px-3 py-1.5 rounded-xl flex flex-col items-center">
+                <span class="text-xs text-slate-400 uppercase">Lives</span>
+                <span id="livesVal" class="text-rose-400 font-bold text-base sm:text-lg">3</span>
+            </div>
+            <div class="bg-slate-800/80 border border-slate-700/60 px-3 py-1.5 rounded-xl flex flex-col items-center">
+                <span class="text-xs text-slate-400 uppercase">Level</span>
+                <span id="levelVal" class="text-emerald-400 font-bold text-base sm:text-lg">1</span>
+            </div>
+            <div class="bg-slate-800/80 border border-slate-700/60 px-3 py-1.5 rounded-xl flex flex-col items-center hidden sm:flex">
+                <span class="text-xs text-slate-400 uppercase">High Score</span>
+                <span id="highScoreVal" class="text-purple-400 font-bold text-base sm:text-lg">0</span>
+            </div>
+        </div>
+
+        <!-- Controls Buttons Top Right -->
+        <div class="flex items-center gap-2">
+            <button id="pauseBtn" onclick="togglePause()" class="w-10 h-10 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 flex items-center justify-center text-slate-300 transition" title="Pause / Resume">
+                <i class="fa-solid fa-pause" id="pauseIcon"></i>
+            </button>
+            <button onclick="toggleMute()" id="soundBtn" class="w-10 h-10 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 flex items-center justify-center text-slate-300 transition" title="Toggle Sound">
+                <i class="fa-solid fa-volume-high" id="soundIcon"></i>
+            </button>
+            <button onclick="openInfoModal()" class="w-10 h-10 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 flex items-center justify-center text-slate-300 transition" title="How to Play">
+                <i class="fa-solid fa-circle-question"></i>
+            </button>
         </div>
     </header>
 
-    <!-- 主要內容區塊 -->
-    <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+    <!-- Main Game Area -->
+    <main class="relative w-full max-w-4xl aspect-[4/3] sm:aspect-[16/10] bg-slate-950 border-2 border-blue-500/30 rounded-2xl overflow-hidden neon-border shadow-2xl flex items-center justify-center">
         
-        <!-- 頂部數據速覽卡片 -->
-        <section class="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <div class="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm flex items-center justify-between">
-                <div>
-                    <p class="text-xs font-semibold text-slate-500 uppercase tracking-wider">總訂餐筆數</p>
-                    <p class="text-2xl sm:text-3xl font-extrabold text-indigo-600 mt-1" id="statTotalItems">0 <span class="text-xs font-normal text-slate-500">份</span></p>
-                </div>
-                <div class="w-12 h-12 bg-indigo-50 text-indigo-600 rounded-xl flex items-center justify-center text-xl">
-                    <i class="fa-solid fa-box-archive"></i>
-                </div>
+        <!-- Canvas -->
+        <canvas id="gameCanvas" class="w-full h-full"></canvas>
+
+        <!-- Start Screen Overlay -->
+        <div id="startScreen" class="absolute inset-0 bg-slate-950/90 backdrop-blur-md flex flex-col items-center justify-center p-6 text-center z-20">
+            <div class="w-20 h-20 rounded-2xl bg-blue-600/20 border-2 border-blue-500 flex items-center justify-center text-blue-400 text-3xl mb-4 neon-text animate-pulse">
+                <i class="fa-solid fa-cube"></i>
             </div>
-
-            <div class="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm flex items-center justify-between">
-                <div>
-                    <p class="text-xs font-semibold text-slate-500 uppercase tracking-wider">全班總金額</p>
-                    <p class="text-2xl sm:text-3xl font-extrabold text-emerald-600 mt-1" id="statTotalAmount">$0</p>
-                </div>
-                <div class="w-12 h-12 bg-emerald-50 text-emerald-600 rounded-xl flex items-center justify-center text-xl">
-                    <i class="fa-solid fa-sack-dollar"></i>
-                </div>
+            <h2 class="text-3xl sm:text-5xl font-extrabold tracking-wider text-white mb-2 neon-text">NEON BREAKOUT</h2>
+            <p class="text-slate-400 max-w-md text-sm sm:text-base mb-8">
+                摧毀所有磚塊，收集強力道具，挑戰最高得分！支援鍵盤、滑鼠與觸控操作。
+            </p>
+            <button onclick="startGame()" class="arcade-btn text-white font-bold px-8 py-4 rounded-xl text-lg flex items-center gap-3">
+                <i class="fa-solid fa-play"></i> 開始遊戲 (START GAME)
+            </button>
+            <div class="mt-6 flex items-center gap-4 text-xs text-slate-500">
+                <span><i class="fa-solid fa-keyboard mr-1"></i> A/D 或 左右方向鍵 移動</span>
+                <span><i class="fa-solid fa-computer-mouse mr-1"></i> 滑鼠 / 觸控板 游標對齊</span>
             </div>
+        </div>
 
-            <div class="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm flex items-center justify-between">
-                <div>
-                    <p class="text-xs font-semibold text-slate-500 uppercase tracking-wider">已訂餐座號數</p>
-                    <p class="text-2xl sm:text-3xl font-extrabold text-amber-500 mt-1" id="statActiveSeats">0 <span class="text-xs font-normal text-slate-500">人</span></p>
-                </div>
-                <div class="w-12 h-12 bg-amber-50 text-amber-500 rounded-xl flex items-center justify-center text-xl">
-                    <i class="fa-solid fa-users"></i>
-                </div>
-            </div>
-        </section>
-
-        <!-- 訂餐登記區與菜單面板 (兩欄式) -->
-        <section class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-            
-            <!-- 左欄：快速登記表單 -->
-            <div class="lg:col-span-5 space-y-6">
-                <div class="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-sm relative overflow-hidden">
-                    <div class="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-indigo-500 to-indigo-600"></div>
-                    
-                    <div class="flex items-center justify-between mb-4">
-                        <h2 class="text-lg font-bold text-slate-800 flex items-center gap-2">
-                            <i class="fa-solid fa-pen-to-square text-indigo-600"></i>
-                            訂餐登記 (座號 1~50)
-                        </h2>
-                        <span class="text-xs bg-indigo-50 text-indigo-700 px-2.5 py-1 rounded-full font-medium">快捷輸入模式</span>
-                    </div>
-
-                    <form id="orderForm" onsubmit="handleOrderSubmit(event)" class="space-y-4">
-                        <div>
-                            <label for="seatInput" class="block text-sm font-medium text-slate-700 mb-1">
-                                座號 <span class="text-xs text-slate-400 font-normal">(輸入 1~50，或輸入 0 結束登記)</span>
-                            </label>
-                            <div class="relative">
-                                <span class="absolute inset-y-0 left-0 pl-3.5 flex items-center text-slate-400 font-semibold text-sm">#</span>
-                                <input type="number" id="seatInput" min="0" max="50" placeholder="請輸入座號 (例如: 5)" required
-                                    class="w-full pl-8 pr-4 py-3 bg-slate-50 border border-slate-300 rounded-xl focus:bg-white focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition font-semibold text-slate-800 text-lg">
-                            </div>
-                        </div>
-
-                        <div>
-                            <label for="itemInput" class="block text-sm font-medium text-slate-700 mb-1">
-                                餐點編號 <span class="text-xs text-slate-400 font-normal">(輸入 1~5)</span>
-                            </label>
-                            <div class="relative">
-                                <span class="absolute inset-y-0 left-0 pl-3.5 flex items-center text-slate-400 font-semibold text-sm">NO.</span>
-                                <input type="number" id="itemInput" min="1" max="5" placeholder="請輸入餐點編號 (1~5)" 
-                                    class="w-full pl-12 pr-4 py-3 bg-slate-50 border border-slate-300 rounded-xl focus:bg-white focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition font-semibold text-slate-800 text-lg">
-                            </div>
-                        </div>
-
-                        <div class="pt-2 flex gap-2">
-                            <button type="submit" class="flex-1 bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white font-semibold py-3 px-4 rounded-xl shadow-md shadow-indigo-200 transition duration-150 flex items-center justify-center gap-2">
-                                <i class="fa-solid fa-plus text-sm"></i> 新增訂單
-                            </button>
-                            <button type="button" onclick="triggerFinishOrdering()" class="bg-slate-100 hover:bg-slate-200 active:bg-slate-300 text-slate-700 font-medium py-3 px-4 rounded-xl transition duration-150 text-sm whitespace-nowrap" title="座號輸入 0 亦可結束">
-                                結算報表 (0)
-                            </button>
-                        </div>
-                    </form>
-
-                    <div class="mt-4 pt-4 border-t border-slate-100 text-xs text-slate-500 flex items-center gap-1.5">
-                        <i class="fa-solid fa-keyboard text-indigo-400"></i>
-                        <span>提示：輸入座號後按 <kbd class="px-1.5 py-0.5 bg-slate-100 border rounded text-slate-600 font-mono">Enter</kbd> 快速跳轉至餐點編號。</span>
-                    </div>
-                </div>
-            </div>
-
-            <!-- 右欄：內建 5 項菜單顯示與點擊登記 -->
-            <div class="lg:col-span-7 space-y-6">
-                <div class="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-sm">
-                    <div class="flex items-center justify-between mb-4">
-                        <h2 class="text-lg font-bold text-slate-800 flex items-center gap-2">
-                            <i class="fa-solid fa-book-open text-amber-500"></i>
-                            今日內建菜單 <span class="text-xs text-slate-400 font-normal">(點擊卡片可快速輸入)</span>
-                        </h2>
-                        <span class="text-xs bg-amber-50 text-amber-700 font-semibold px-2.5 py-1 rounded-full">共 5 項菜單</span>
-                    </div>
-
-                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3" id="menuContainer">
-                        <!-- 由 JavaScript 動態生成菜單內容 -->
-                    </div>
-                </div>
-            </div>
-
-        </section>
-
-        <!-- 結算報表與明細區塊 -->
-        <section id="reportSection" class="space-y-6 pt-4">
-            
-            <div class="flex flex-wrap items-center justify-between gap-4 bg-slate-800 text-white p-5 rounded-2xl shadow-sm">
-                <div class="flex items-center gap-3">
-                    <div class="p-2.5 bg-indigo-500/20 rounded-xl text-indigo-300">
-                        <i class="fa-solid fa-chart-pie text-2xl"></i>
-                    </div>
-                    <div>
-                        <h2 class="text-xl font-bold">午餐訂購結算報表</h2>
-                        <p class="text-xs text-slate-300">即時匯整各品項數量、小計金額與座號統計</p>
-                    </div>
-                </div>
-
-                <div class="flex flex-wrap items-center gap-2">
-                    <button onclick="copyLineReport()" class="bg-emerald-600 hover:bg-emerald-500 active:bg-emerald-700 text-white font-medium px-4 py-2.5 rounded-xl transition text-sm flex items-center gap-2 shadow-sm">
-                        <i class="fa-solid fa-copy"></i> 複製 LINE 班級報表
-                    </button>
-                    <button onclick="openConfirmModal()" class="bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 border border-rose-500/40 font-medium px-4 py-2.5 rounded-xl transition text-sm flex items-center gap-2">
-                        <i class="fa-solid fa-trash-can"></i> 清空重置
-                    </button>
-                </div>
-            </div>
-
-            <!-- 報表內容：品項統計與座號明細 -->
-            <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
-                
-                <!-- 品項統計表格 -->
-                <div class="lg:col-span-5 bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden flex flex-col">
-                    <div class="p-4 border-b border-slate-100 bg-slate-50/50 flex items-center justify-between">
-                        <h3 class="font-bold text-slate-800 flex items-center gap-2">
-                            <i class="fa-solid fa-list-check text-indigo-600"></i> 各品項訂購數量統計
-                        </h3>
-                    </div>
-                    <div class="p-4 flex-1 overflow-x-auto">
-                        <table class="w-full text-left text-sm">
-                            <thead>
-                                <tr class="text-xs text-slate-400 border-b border-slate-200">
-                                    <th class="pb-2 font-medium">品項名稱</th>
-                                    <th class="pb-2 font-medium text-right">單價</th>
-                                    <th class="pb-2 font-medium text-center">數量</th>
-                                    <th class="pb-2 font-medium text-right">小計</th>
-                                </tr>
-                            </thead>
-                            <tbody id="summaryTableBody" class="divide-y divide-slate-100">
-                                <!-- JS 動態填充 -->
-                            </tbody>
-                            <tfoot class="border-t-2 border-slate-200 font-bold text-slate-800">
-                                <tr>
-                                    <td class="pt-3" colspan="2">全班總計</td>
-                                    <td class="pt-3 text-center text-indigo-600" id="totalCountFoot">0 份</td>
-                                    <td class="pt-3 text-right text-emerald-600" id="totalPriceFoot">$0</td>
-                                </tr>
-                            </tfoot>
-                        </table>
-                    </div>
-                </div>
-
-                <!-- 座號訂餐明細表 (1~50號 網格視圖) -->
-                <div class="lg:col-span-7 bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden flex flex-col">
-                    <div class="p-4 border-b border-slate-100 bg-slate-50/50 flex items-center justify-between">
-                        <h3 class="font-bold text-slate-800 flex items-center gap-2">
-                            <i class="fa-solid fa-clipboard-user text-indigo-600"></i>
-                            座號訂餐明細表 <span class="text-xs font-normal text-slate-400">(依座號 1~50 排序)</span>
-                        </h3>
-                        <div class="flex items-center space-x-2">
-                            <span class="inline-block w-2.5 h-2.5 rounded-full bg-emerald-500"></span>
-                            <span class="text-xs text-slate-500">已訂餐</span>
-                            <span class="inline-block w-2.5 h-2.5 rounded-full bg-slate-200 ml-2"></span>
-                            <span class="text-xs text-slate-500">未訂餐</span>
-                        </div>
-                    </div>
-                    
-                    <div class="p-4 flex-1 max-h-[480px] overflow-y-auto">
-                        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2.5" id="seatGridContainer">
-                            <!-- JS 動態生成座號卡片 -->
-                        </div>
-                    </div>
-                </div>
-
-            </div>
-
-        </section>
-
-    </main>
-
-    <!-- 頁腳 footer -->
-    <footer class="bg-white border-t border-slate-200 mt-12 py-4 text-center text-xs text-slate-400">
-        <p>班級午餐訂餐系統 &copy; 2026 高中學生會資訊組 版權所有</p>
-    </footer>
-
-    <!-- 自訂 Toast 提示通知容器 -->
-    <div id="toastContainer" class="fixed bottom-5 right-5 z-50 flex flex-col gap-2 max-w-sm w-full pointer-events-none px-4"></div>
-
-    <!-- 自訂刪除確認 Modal 彈窗 (代替 native confirm) -->
-    <div id="confirmModal" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center hidden opacity-0 transition-opacity duration-200">
-        <div class="bg-white rounded-2xl max-w-md w-full mx-4 p-6 shadow-xl border border-slate-100 transform scale-95 transition-transform duration-200" id="confirmModalBox">
-            <div class="w-12 h-12 bg-rose-100 text-rose-600 rounded-full flex items-center justify-center text-xl mb-4">
-                <i class="fa-solid fa-triangle-exclamation"></i>
-            </div>
-            <h3 class="text-lg font-bold text-slate-800">確定要清空所有訂購資料嗎？</h3>
-            <p class="text-sm text-slate-500 mt-2">此動作將清除目前登記的所有座號訂單，且無法恢復。建議先複製結算報表。</p>
-            <div class="mt-6 flex gap-3 justify-end">
-                <button onclick="closeConfirmModal()" class="px-4 py-2.5 rounded-xl border border-slate-300 text-slate-600 font-medium hover:bg-slate-50 text-sm">
-                    取消
+        <!-- Pause Menu Overlay -->
+        <div id="pauseScreen" class="absolute inset-0 bg-slate-950/80 backdrop-blur-md flex flex-col items-center justify-center p-6 text-center z-20 hidden">
+            <h2 class="text-3xl font-bold text-white mb-6 neon-text">遊戲暫停</h2>
+            <div class="flex flex-col gap-4 w-48">
+                <button onclick="togglePause()" class="arcade-btn text-white font-bold py-3 rounded-xl flex items-center justify-center gap-2">
+                    <i class="fa-solid fa-play"></i> 繼續遊戲
                 </button>
-                <button onclick="confirmClearAll()" class="px-4 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-medium text-sm shadow-sm">
-                    確認清空
+                <button onclick="restartGame()" class="bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 font-bold py-3 rounded-xl flex items-center justify-center gap-2 transition">
+                    <i class="fa-solid fa-rotate-right"></i> 重新開始
                 </button>
             </div>
         </div>
+
+        <!-- Game Over Overlay -->
+        <div id="gameOverScreen" class="absolute inset-0 bg-slate-950/90 backdrop-blur-md flex flex-col items-center justify-center p-6 text-center z-20 hidden">
+            <div class="w-16 h-16 rounded-2xl bg-rose-600/20 border-2 border-rose-500 flex items-center justify-center text-rose-400 text-2xl mb-4">
+                <i class="fa-solid fa-skull"></i>
+            </div>
+            <h2 class="text-3xl sm:text-4xl font-extrabold text-rose-500 mb-2 neon-text-pink">遊戲結束</h2>
+            <p class="text-slate-400 mb-6 text-sm">再接再厲！發揮你的實力挑戰更高分。</p>
+            
+            <div class="bg-slate-900 border border-slate-800 p-4 rounded-xl mb-6 w-64 flex justify-around text-center">
+                <div>
+                    <span class="text-xs text-slate-400 block">最終得分</span>
+                    <span id="finalScore" class="text-amber-400 text-xl font-bold font-arcade">0</span>
+                </div>
+                <div class="border-r border-slate-800"></div>
+                <div>
+                    <span class="text-xs text-slate-400 block">最高紀錄</span>
+                    <span id="finalHighScore" class="text-purple-400 text-xl font-bold font-arcade">0</span>
+                </div>
+            </div>
+
+            <button onclick="restartGame()" class="arcade-btn text-white font-bold px-8 py-3.5 rounded-xl flex items-center gap-2">
+                <i class="fa-solid fa-rotate-right"></i> 再次挑戰
+            </button>
+        </div>
+
+        <!-- Victory / Level Complete Overlay -->
+        <div id="victoryScreen" class="absolute inset-0 bg-slate-950/90 backdrop-blur-md flex flex-col items-center justify-center p-6 text-center z-20 hidden">
+            <div class="w-16 h-16 rounded-2xl bg-emerald-600/20 border-2 border-emerald-500 flex items-center justify-center text-emerald-400 text-2xl mb-4 animate-bounce">
+                <i class="fa-solid fa-trophy"></i>
+            </div>
+            <h2 id="victoryTitle" class="text-3xl sm:text-4xl font-extrabold text-emerald-400 mb-2">關卡完成！</h2>
+            <p id="victoryDesc" class="text-slate-400 mb-6 text-sm">太神啦！你成功清理了所有磚塊！</p>
+            <button id="nextLevelBtn" onclick="nextLevel()" class="arcade-btn text-white font-bold px-8 py-3.5 rounded-xl flex items-center gap-2">
+                <i class="fa-solid fa-forward"></i> 進入下一關
+            </button>
+        </div>
+
+    </main>
+
+    <!-- Footer / Mobile Controls Reminder -->
+    <footer class="w-full max-w-4xl text-center py-3 text-xs text-slate-500 flex flex-col sm:flex-row items-center justify-between gap-2">
+        <p>© 2026 Neon Breakout Arcade. Powered by HTML5 Canvas & Tailwind CSS.</p>
+        <div class="flex items-center gap-4">
+            <span class="inline-flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-full bg-blue-500 inline-block"></span> 寬板子道具</span>
+            <span class="inline-flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-full bg-amber-500 inline-block"></span> 多球道具</span>
+            <span class="inline-flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-full bg-rose-500 inline-block"></span> 生命加碼</span>
+        </div>
+    </footer>
+
+    <!-- Info / How to Play Modal -->
+    <div id="infoModal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl max-w-md w-full p-6 shadow-2xl relative">
+            <button onclick="closeInfoModal()" class="absolute top-4 right-4 text-slate-400 hover:text-white text-lg">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+            <h3 class="text-xl font-bold text-white mb-4 flex items-center gap-2">
+                <i class="fa-solid fa-circle-info text-blue-500"></i> 遊戲說明與規則
+            </h3>
+            <ul class="space-y-3 text-sm text-slate-300 mb-6">
+                <li class="flex items-start gap-2">
+                    <i class="fa-solid fa-angles-right text-blue-400 mt-1"></i>
+                    <span><strong>移動滑板：</strong> 使用滑鼠指標、觸控拖曳或鍵盤方向鍵（← / → 或 A / D）移動底部滑板。</span>
+                </li>
+                <li class="flex items-start gap-2">
+                    <i class="fa-solid fa-angles-right text-blue-400 mt-1"></i>
+                    <span><strong>反彈角度：</strong> 球打在滑板的不同位置會改變反彈角度（靠近邊緣角度更大）。</span>
+                </li>
+                <li class="flex items-start gap-2">
+                    <i class="fa-solid fa-angles-right text-blue-400 mt-1"></i>
+                    <span><strong>隨機道具：</strong> 擊碎特定磚塊會掉落增益道具，接住即可獲得特殊能力：
+                        <ul class="pl-5 mt-1 space-y-1 text-xs text-slate-400 list-disc">
+                            <li><strong class="text-blue-400">寬板 (Expand)：</strong> 延長滑板寬度。</li>
+                            <li><strong class="text-amber-400">多球 (Multi-Ball)：</strong> 分裂出額外的小球。</li>
+                            <li><strong class="text-rose-400">加命 (Life+)：</strong> 增加 1 點生命值。</li>
+                        </ul>
+                    </span>
+                </li>
+                <li class="flex items-start gap-2">
+                    <i class="fa-solid fa-angles-right text-blue-400 mt-1"></i>
+                    <span><strong>通關條件：</strong> 清除畫面上所有磚塊即可晉級下一關，隨著關卡提升，球速會加快。</span>
+                </li>
+            </ul>
+            <button onclick="closeInfoModal()" class="w-full bg-slate-800 hover:bg-slate-700 border border-slate-700 text-white font-bold py-2.5 rounded-xl transition">
+                了解，關閉視窗
+            </button>
+        </div>
     </div>
 
-    <!-- 核心 JavaScript 邏輯 -->
+    <!-- Custom Message Box for non-alert feedback -->
+    <div id="msgToast" class="fixed bottom-6 right-6 bg-slate-900 border border-blue-500/50 text-white px-5 py-3 rounded-xl shadow-2xl z-50 transition-all duration-300 transform translate-y-20 opacity-0 flex items-center gap-3">
+        <i class="fa-solid fa-circle-check text-emerald-400 text-lg" id="msgIcon"></i>
+        <span id="msgText" class="text-sm font-medium">提示訊息</span>
+    </div>
+
+    <!-- JavaScript Game Engine -->
     <script>
-        // 1. 內建菜單資料定義
-        const MENU_ITEMS = [
-            { id: 1, name: "排骨便當", price: 80, icon: "🍱", badgeColor: "bg-amber-100 text-amber-800" },
-            { id: 2, name: "雞腿便當", price: 85, icon: "🍗", badgeColor: "bg-orange-100 text-orange-800" },
-            { id: 3, name: "素食便當", price: 70, icon: "🥗", badgeColor: "bg-emerald-100 text-emerald-800" },
-            { id: 4, name: "滷肉飯",   price: 55, icon: "🍚", badgeColor: "bg-amber-100 text-amber-900" },
-            { id: 5, name: "貢丸湯",   price: 20, icon: "🥣", badgeColor: "bg-blue-100 text-blue-800" }
-        ];
+        // --- DOM Elements & Audio / Settings ---
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
 
-        // 2. 訂單狀態管理 (儲存於記憶體，並同步 localstorage 避免意外刷新)
-        let ordersList = [];
+        const scoreEl = document.getElementById('scoreVal');
+        const livesEl = document.getElementById('livesVal');
+        const levelEl = document.getElementById('levelVal');
+        const highScoreEl = document.getElementById('highScoreVal');
 
-        // 3. Web Audio 音效合成器 (免除外部音效檔載入失敗問題)
-        const SoundFX = {
-            ctx: null,
-            init() {
-                if (!this.ctx) {
-                    const AudioCtx = window.AudioContext || window.webkitAudioContext;
-                    if (AudioCtx) this.ctx = new AudioCtx();
-                }
-            },
-            playSuccess() {
-                this.init();
-                if (!this.ctx) return;
-                const osc = this.ctx.createOscillator();
-                const gain = this.ctx.createGain();
-                osc.type = 'sine';
-                osc.frequency.setValueAtTime(523.25, this.ctx.currentTime); // C5
-                osc.frequency.exponentialRampToValueAtTime(659.25, this.ctx.currentTime + 0.1); // E5
-                gain.gain.setValueAtTime(0.12, this.ctx.currentTime);
-                gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.15);
-                osc.connect(gain); gain.connect(this.ctx.destination);
-                osc.start(); osc.stop(this.ctx.currentTime + 0.15);
-            },
-            playError() {
-                this.init();
-                if (!this.ctx) return;
-                const osc = this.ctx.createOscillator();
-                const gain = this.ctx.createGain();
-                osc.type = 'sawtooth';
-                osc.frequency.setValueAtTime(220, this.ctx.currentTime); // A3
-                osc.frequency.setValueAtTime(180, this.ctx.currentTime + 0.08);
-                gain.gain.setValueAtTime(0.12, this.ctx.currentTime);
-                gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.2);
-                osc.connect(gain); gain.connect(this.ctx.destination);
-                osc.start(); osc.stop(this.ctx.currentTime + 0.2);
-            },
-            playFinish() {
-                this.init();
-                if (!this.ctx) return;
-                [523.25, 659.25, 783.99, 1046.50].forEach((freq, i) => {
-                    const osc = this.ctx.createOscillator();
-                    const gain = this.ctx.createGain();
-                    osc.type = 'triangle';
-                    osc.frequency.value = freq;
-                    gain.gain.setValueAtTime(0.1, this.ctx.currentTime + i * 0.07);
-                    gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + i * 0.07 + 0.2);
-                    osc.connect(gain); gain.connect(this.ctx.destination);
-                    osc.start(this.ctx.currentTime + i * 0.07);
-                    osc.stop(this.ctx.currentTime + i * 0.07 + 0.2);
-                });
-            }
+        const startScreen = document.getElementById('startScreen');
+        const pauseScreen = document.getElementById('pauseScreen');
+        const gameOverScreen = document.getElementById('gameOverScreen');
+        const victoryScreen = document.getElementById('victoryScreen');
+        const victoryTitle = document.getElementById('victoryTitle');
+        const victoryDesc = document.getElementById('victoryDesc');
+        const nextLevelBtn = document.getElementById('nextLevelBtn');
+
+        const pauseIcon = document.getElementById('pauseIcon');
+        const soundBtn = document.getElementById('soundIcon');
+
+        // --- Game State Variables ---
+        let gameState = 'START'; // START, PLAYING, PAUSED, GAMEOVER, VICTORY
+        let score = 0;
+        let lives = 3;
+        let level = 1;
+        let highScore = localStorage.getItem('neon_breakout_highscore') || 0;
+        let soundEnabled = true;
+
+        highScoreEl.textContent = highScore;
+
+        // Canvas Virtual Dimensions for precise scaling
+        const VIRTUAL_WIDTH = 800;
+        const VIRTUAL_HEIGHT = 600;
+
+        function resizeCanvas() {
+            const container = canvas.parentElement;
+            canvas.width = VIRTUAL_WIDTH;
+            canvas.height = VIRTUAL_HEIGHT;
+        }
+
+        window.addEventListener('resize', resizeCanvas);
+        resizeCanvas();
+
+        // --- Paddle Object ---
+        let paddle = {
+            width: 120,
+            height: 16,
+            x: VIRTUAL_WIDTH / 2 - 60,
+            y: VIRTUAL_HEIGHT - 40,
+            dx: 0,
+            speed: 9,
+            color: '#3b82f6',
+            targetX: VIRTUAL_WIDTH / 2 - 60
         };
 
-        // 4. 初始化與事件監聽
-        window.addEventListener('DOMContentLoaded', () => {
-            // 初始化日期顯示
-            const today = new Date();
-            const yyyy = today.getFullYear();
-            const mm = String(today.getMonth() + 1).padStart(2, '0');
-            const dd = String(today.getDate()).padStart(2, '0');
-            document.getElementById('currentDateDisplay').textContent = `${yyyy}/${mm}/${dd}`;
+        // --- Balls Array ---
+        let balls = [];
 
-            // 從 localStorage 讀取歷史舊資料（若有）
-            const savedOrders = localStorage.getItem('school_lunch_orders');
-            if (savedOrders) {
-                try {
-                    ordersList = JSON.parse(savedOrders);
-                } catch(e) {
-                    ordersList = [];
+        function createBall(x, y, dx, dy) {
+            return {
+                x: x || paddle.x + paddle.width / 2,
+                y: y || paddle.y - 12,
+                radius: 8,
+                dx: dx !== undefined ? dx : 4,
+                dy: dy !== undefined ? dy : -4,
+                speed: 5.5,
+                color: '#60a5fa'
+            };
+        }
+
+        // --- Bricks Configuration ---
+        let bricks = [];
+        let brickRowCount = 5;
+        let brickColumnCount = 8;
+        let brickWidth = 85;
+        let brickHeight = 24;
+        let brickPadding = 12;
+        let brickOffsetTop = 70;
+        let brickOffsetLeft = 55;
+
+        // Brick colors based on row index
+        const brickColors = [
+            { border: '#f43f5e', fill: '#fda4af', points: 50 }, // Row 0: Pink (High value)
+            { border: '#f97316', fill: '#fdba74', points: 40 }, // Row 1: Orange
+            { border: '#eab308', fill: '#fde047', points: 30 }, // Row 2: Yellow
+            { border: '#10b981', fill: '#6ee7b7', points: 20 }, // Row 3: Green
+            { border: '#3b82f6', fill: '#93c5fd', points: 10 }  // Row 4: Blue (Low value)
+        ];
+
+        // --- Power-ups Array & Types ---
+        let powerUps = [];
+        const powerUpTypes = [
+            { type: 'expand', color: '#3b82f6', icon: 'fa-arrows-split-up-and-left', name: '寬板' },
+            { type: 'multiball', color: '#f59e0b', icon: 'fa-circle-dot', name: '多球' },
+            { type: 'life', color: '#f43f5e', icon: 'fa-heart', name: '生命+' }
+        ];
+
+        // --- Particle System ---
+        let particles = [];
+        function createParticles(x, y, color) {
+            for (let i = 0; i < 15; i++) {
+                const angle = Math.random() * Math.PI * 2;
+                const speed = Math.random() * 4 + 1;
+                particles.push({
+                    x: x,
+                    y: y,
+                    dx: Math.cos(angle) * speed,
+                    dy: Math.sin(angle) * speed,
+                    radius: Math.random() * 3 + 1,
+                    color: color,
+                    alpha: 1,
+                    decay: Math.random() * 0.03 + 0.02
+                });
+            }
+        }
+
+        // --- Keyboard & Mouse Input Controls ---
+        let rightPressed = false;
+        let leftPressed = false;
+
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Right' || e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') {
+                rightPressed = true;
+            } else if (e.key === 'Left' || e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A') {
+                leftPressed = true;
+            } else if (e.key === ' ' || e.key === 'p' || e.key === 'P') {
+                if (gameState === 'PLAYING' || gameState === 'PAUSED') {
+                    togglePause();
                 }
             }
-
-            // 渲染菜單與介面
-            renderMenuCards();
-            renderDashboardAndReport();
-
-            // 輸入框 Enter 鍵焦點切換優化
-            const seatInput = document.getElementById('seatInput');
-            const itemInput = document.getElementById('itemInput');
-
-            seatInput.addEventListener('keydown', (e) => {
-                if (e.key === 'Enter') {
-                    e.preventDefault();
-                    const seatVal = parseInt(seatInput.value, 10);
-                    if (seatVal === 0) {
-                        triggerFinishOrdering();
-                    } else if (seatVal >= 1 && seatVal <= 50) {
-                        itemInput.focus();
-                        itemInput.select();
-                    } else {
-                        handleOrderSubmit(e); // 觸發驗證報錯
-                    }
-                }
-            });
-
-            // 預設將焦點放至座號輸入框
-            seatInput.focus();
         });
 
-        // 5. 渲染內建菜單卡片
-        function renderMenuCards() {
-            const container = document.getElementById('menuContainer');
-            container.innerHTML = MENU_ITEMS.map(item => `
-                <div onclick="quickSelectMenu(${item.id})" 
-                     class="group bg-slate-50 hover:bg-indigo-50/60 border border-slate-200 hover:border-indigo-300 p-4 rounded-xl cursor-pointer transition flex items-center justify-between select-none">
-                    <div class="flex items-center space-x-3">
-                        <div class="w-10 h-10 bg-white rounded-lg border border-slate-200 group-hover:border-indigo-200 flex items-center justify-center text-xl shadow-sm">
-                            ${item.icon}
-                        </div>
-                        <div>
-                            <div class="flex items-center gap-2">
-                                <span class="text-xs font-bold px-1.5 py-0.5 bg-slate-200 text-slate-700 rounded font-mono">NO.${item.id}</span>
-                                <h3 class="font-bold text-slate-800 text-base group-hover:text-indigo-700">${item.name}</h3>
-                            </div>
-                            <p class="text-xs text-slate-500 mt-0.5">點擊可直接登記或選取</p>
-                        </div>
-                    </div>
-                    <div class="text-right">
-                        <span class="text-base font-extrabold text-indigo-600">$${item.price}</span>
-                    </div>
-                </div>
-            `).join('');
-        }
-
-        // 6. 點擊菜單卡片之快捷點擊邏輯
-        function quickSelectMenu(itemId) {
-            const seatInput = document.getElementById('seatInput');
-            const itemInput = document.getElementById('itemInput');
-            const seatNum = parseInt(seatInput.value, 10);
-
-            if (seatNum >= 1 && seatNum <= 50) {
-                // 若已填寫有效座號，直接完成新增
-                itemInput.value = itemId;
-                processAddOrder(seatNum, itemId);
-            } else {
-                // 若無座號，自動填入餐點編號並聚焦至座號
-                itemInput.value = itemId;
-                showToast(`已填入菜單 [NO.${itemId}]，請輸入座號後按 Enter`, 'info');
-                seatInput.focus();
+        document.addEventListener('keyup', (e) => {
+            if (e.key === 'Right' || e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') {
+                rightPressed = false;
+            } else if (e.key === 'Left' || e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A') {
+                leftPressed = false;
             }
-        }
+        });
 
-        // 7. 表單提交與驗證邏輯
-        function handleOrderSubmit(e) {
+        // Mouse & Touch Control on Canvas
+        canvas.addEventListener('mousemove', (e) => {
+            if (gameState !== 'PLAYING') return;
+            const rect = canvas.getBoundingClientRect();
+            const scaleX = VIRTUAL_WIDTH / rect.width;
+            const mouseX = (e.clientX - rect.left) * scaleX;
+            paddle.targetX = mouseX - paddle.width / 2;
+        });
+
+        canvas.addEventListener('touchmove', (e) => {
+            if (gameState !== 'PLAYING') return;
             e.preventDefault();
-            const seatInput = document.getElementById('seatInput');
-            const itemInput = document.getElementById('itemInput');
+            const rect = canvas.getBoundingClientRect();
+            const scaleX = VIRTUAL_WIDTH / rect.width;
+            const touchX = (e.touches[0].clientX - rect.left) * scaleX;
+            paddle.targetX = touchX - paddle.width / 2;
+        }, { passive: false });
 
-            const seatVal = parseInt(seatInput.value, 10);
-            const itemVal = parseInt(itemInput.value, 10);
-
-            // 驗證座號 0
-            if (seatVal === 0) {
-                triggerFinishOrdering();
-                return;
-            }
-
-            // 驗證座號範圍 1~50
-            if (isNaN(seatVal) || seatVal < 1 || seatVal > 50) {
-                SoundFX.playError();
-                showToast('座號無效！必須為 1 到 50 之間的數字 (或輸入 0 結算)', 'error');
-                seatInput.classList.add('border-rose-500', 'bg-rose-50');
-                setTimeout(() => seatInput.classList.remove('border-rose-500', 'bg-rose-50'), 1500);
-                seatInput.focus();
-                seatInput.select();
-                return;
-            }
-
-            // 驗證餐點編號範圍 1~5
-            if (isNaN(itemVal) || itemVal < 1 || itemVal > 5) {
-                SoundFX.playError();
-                showToast('餐點編號無效！請輸入 1 到 5 之間的菜單編號', 'error');
-                itemInput.classList.add('border-rose-500', 'bg-rose-50');
-                setTimeout(() => itemInput.classList.remove('border-rose-500', 'bg-rose-50'), 1500);
-                itemInput.focus();
-                itemInput.select();
-                return;
-            }
-
-            // 驗證通過，執行新增
-            processAddOrder(seatVal, itemVal);
-        }
-
-        // 8. 執行新增訂單
-        function processAddOrder(seatNum, itemId) {
-            const menuItem = MENU_ITEMS.find(m => m.id === itemId);
-            if (!menuItem) return;
-
-            const newOrder = {
-                id: Date.now() + Math.random().toString(36).substr(2, 4),
-                seatNumber: seatNum,
-                itemId: itemId,
-                itemName: menuItem.name,
-                itemPrice: menuItem.price,
-                time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-            };
-
-            ordersList.push(newOrder);
-            saveOrdersToStorage();
-            
-            SoundFX.playSuccess();
-            showToast(`✅ 座號 #${seatNum} 成功登記：${menuItem.name} ($${menuItem.price})`, 'success');
-
-            // 重新渲染介面
-            renderDashboardAndReport();
-
-            // 清空餐點輸入框，將焦點重置至座號，準備登記下一筆
-            const seatInput = document.getElementById('seatInput');
-            const itemInput = document.getElementById('itemInput');
-            itemInput.value = '';
-            seatInput.value = '';
-            seatInput.focus();
-        }
-
-        // 9. 結束登記 (座號 0) 觸發
-        function triggerFinishOrdering() {
-            SoundFX.playFinish();
-            showToast('🎉 已完成登記！已將畫面捲動至結算報表', 'success');
-            
-            // 清空輸入框
-            document.getElementById('seatInput').value = '';
-            document.getElementById('itemInput').value = '';
-
-            // 自動平滑捲動至報表區塊
-            const reportEl = document.getElementById('reportSection');
-            if (reportEl) {
-                reportEl.scrollIntoView({ behavior: 'smooth' });
+        // --- Sound Generator (Web Audio API for zero external dependency) ---
+        let audioCtx = null;
+        function initAudio() {
+            if (!audioCtx) {
+                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
             }
         }
 
-        // 10. 刪除單筆訂單
-        function deleteSingleOrder(orderId) {
-            ordersList = ordersList.filter(o => o.id !== orderId);
-            saveOrdersToStorage();
-            SoundFX.playSuccess();
-            showToast('已刪除該筆訂購紀錄', 'info');
-            renderDashboardAndReport();
-        }
-
-        // 11. 清空所有訂單（搭配 Modal）
-        function openConfirmModal() {
-            const modal = document.getElementById('confirmModal');
-            const box = document.getElementById('confirmModalBox');
-            modal.classList.remove('hidden');
-            setTimeout(() => {
-                modal.classList.remove('opacity-0');
-                box.classList.remove('scale-95');
-            }, 10);
-        }
-
-        function closeConfirmModal() {
-            const modal = document.getElementById('confirmModal');
-            const box = document.getElementById('confirmModalBox');
-            modal.classList.add('opacity-0');
-            box.classList.add('scale-95');
-            setTimeout(() => {
-                modal.classList.add('hidden');
-            }, 200);
-        }
-
-        function confirmClearAll() {
-            ordersList = [];
-            saveOrdersToStorage();
-            closeConfirmModal();
-            SoundFX.playSuccess();
-            showToast('已清空所有訂單資料', 'info');
-            renderDashboardAndReport();
-        }
-
-        // 12. 儲存至 LocalStorage
-        function saveOrdersToStorage() {
-            localStorage.setItem('school_lunch_orders', JSON.stringify(ordersList));
-        }
-
-        // 13. 渲染數據看板與報表
-        function renderDashboardAndReport() {
-            // 計算全班總金額與總筆數
-            const totalItemsCount = ordersList.length;
-            const totalAmount = ordersList.reduce((sum, o) => sum + o.itemPrice, 0);
-            const activeSeatsSet = new Set(ordersList.map(o => o.seatNumber));
-
-            // 更新頂部卡片數據
-            document.getElementById('statTotalItems').innerHTML = `${totalItemsCount} <span class="text-xs font-normal text-slate-500">份</span>`;
-            document.getElementById('statTotalAmount').textContent = `$${totalAmount.toLocaleString()}`;
-            document.getElementById('statActiveSeats').innerHTML = `${activeSeatsSet.size} <span class="text-xs font-normal text-slate-500">人</span>`;
-
-            // 渲染品項統計表格
-            renderSummaryTable(totalItemsCount, totalAmount);
-
-            // 渲染座號 1~50 明細網格
-            renderSeatGrid();
-        }
-
-        // 14. 渲染各品項小計表格
-        function renderSummaryTable(totalItemsCount, totalAmount) {
-            const tbody = document.getElementById('summaryTableBody');
-            
-            // 統計各品項數量
-            const itemCounts = {};
-            MENU_ITEMS.forEach(m => itemCounts[m.id] = 0);
-            ordersList.forEach(o => {
-                if (itemCounts[o.itemId] !== undefined) {
-                    itemCounts[o.itemId]++;
-                }
-            });
-
-            tbody.innerHTML = MENU_ITEMS.map(item => {
-                const count = itemCounts[item.id] || 0;
-                const subtotal = count * item.price;
-                return `
-                    <tr class="hover:bg-slate-50/80 transition">
-                        <td class="py-3 font-medium text-slate-800 flex items-center gap-2">
-                            <span>${item.icon}</span> ${item.name}
-                        </td>
-                        <td class="py-3 text-right text-slate-500">$${item.price}</td>
-                        <td class="py-3 text-center">
-                            <span class="${count > 0 ? 'bg-indigo-100 text-indigo-800 font-bold' : 'text-slate-400'} px-2 py-0.5 rounded-full text-xs">
-                                ${count}
-                            </span>
-                        </td>
-                        <td class="py-3 text-right font-semibold text-slate-700">$${subtotal}</td>
-                    </tr>
-                `;
-            }).join('');
-
-            document.getElementById('totalCountFoot').textContent = `${totalItemsCount} 份`;
-            document.getElementById('totalPriceFoot').textContent = `$${totalAmount.toLocaleString()}`;
-        }
-
-        // 15. 渲染座號 1~50 明細網格
-        function renderSeatGrid() {
-            const container = document.getElementById('seatGridContainer');
-            
-            // 按座號 1~50 歸類訂單
-            const seatMap = {};
-            for (let i = 1; i <= 50; i++) {
-                seatMap[i] = [];
-            }
-            ordersList.forEach(o => {
-                if (seatMap[o.seatNumber]) {
-                    seatMap[o.seatNumber].push(o);
-                }
-            });
-
-            let html = '';
-            for (let seat = 1; seat <= 50; seat++) {
-                const seatOrders = seatMap[seat];
-                const hasOrder = seatOrders.length > 0;
-                const seatTotal = seatOrders.reduce((sum, o) => sum + o.itemPrice, 0);
-
-                if (hasOrder) {
-                    html += `
-                        <div class="bg-emerald-50/40 border border-emerald-200 rounded-xl p-3 flex flex-col justify-between space-y-2">
-                            <div class="flex items-center justify-between border-b border-emerald-100 pb-1.5">
-                                <span class="font-bold text-emerald-900 text-sm flex items-center gap-1">
-                                    <i class="fa-solid fa-circle-check text-emerald-500 text-xs"></i> 座號 #${seat}
-                                </span>
-                                <span class="text-xs font-extrabold text-emerald-700">$${seatTotal}</span>
-                            </div>
-                            <div class="space-y-1">
-                                ${seatOrders.map(o => `
-                                    <div class="flex items-center justify-between text-xs text-slate-700 bg-white/80 px-2 py-1 rounded border border-emerald-100/60">
-                                        <span>${o.itemName}</span>
-                                        <div class="flex items-center gap-1.5">
-                                            <span class="text-slate-400">$${o.itemPrice}</span>
-                                            <button onclick="deleteSingleOrder('${o.id}')" class="text-rose-400 hover:text-rose-600 p-0.5" title="刪除此項">
-                                                <i class="fa-solid fa-xmark"></i>
-                                            </button>
-                                        </div>
-                                    </div>
-                                me`).join('')}
-                            </div>
-                        </div>
-                    `;
-                } else {
-                    html += `
-                        <div class="bg-slate-50/60 border border-slate-100 rounded-xl p-2.5 flex items-center justify-between text-slate-400 opacity-70">
-                            <span class="font-medium text-xs">座號 #${seat}</span>
-                            <span class="text-[11px] font-normal">未訂餐</span>
-                        </div>
-                    `;
-                }
-            }
-            container.innerHTML = html;
-        }
-
-        // 16. 複製 LINE 格式文字報表
-        function copyLineReport() {
-            if (ordersList.length === 0) {
-                showToast('目前尚無訂單資料可供複製！', 'error');
-                SoundFX.playError();
-                return;
-            }
-
-            const todayStr = document.getElementById('currentDateDisplay').textContent;
-            const totalItemsCount = ordersList.length;
-            const totalAmount = ordersList.reduce((sum, o) => sum + o.itemPrice, 0);
-
-            // 統計品項
-            const itemCounts = {};
-            MENU_ITEMS.forEach(m => itemCounts[m.id] = 0);
-            ordersList.forEach(o => {
-                if (itemCounts[o.itemId] !== undefined) itemCounts[o.itemId]++;
-            });
-
-            let reportText = `🍱 【班級午餐訂餐統計報表】\n`;
-            reportText += `📅 日期：${todayStr}\n`;
-            reportText += `-----------------------------\n`;
-            reportText += `【品項數量與小計】\n`;
-
-            MENU_ITEMS.forEach(item => {
-                const count = itemCounts[item.id] || 0;
-                if (count > 0) {
-                    reportText += `• ${item.name} ($${item.price}) × ${count} 份 = $${count * item.price}\n`;
-                }
-            });
-
-            reportText += `-----------------------------\n`;
-            reportText += `📊 總訂餐數量：${totalItemsCount} 份\n`;
-            reportText += `💰 全班總金額：$${totalAmount} 元\n\n`;
-            reportText += `📋 【座號訂餐明細表】\n`;
-
-            // 座號明細整理
-            const seatMap = {};
-            ordersList.forEach(o => {
-                if (!seatMap[o.seatNumber]) seatMap[o.seatNumber] = [];
-                seatMap[o.seatNumber].push(o.itemName);
-            });
-
-            const sortedSeats = Object.keys(seatMap).sort((a,b) => Number(a) - Number(b));
-            sortedSeats.forEach(seat => {
-                reportText += `#${String(seat).padStart(2, '0')} 號：${seatMap[seat].join(' + ')}\n`;
-            });
-
-            reportText += `-----------------------------\n`;
-            reportText += `請大家備妥零錢，便當到達時依座號領取！感謝配合！`;
-
-            // 剪貼簿複製作業 (相容於內嵌 iFrame)
-            copyTextToClipboard(reportText);
-        }
-
-        // 剪貼簿輔助函式
-        function copyTextToClipboard(text) {
-            const textarea = document.createElement('textarea');
-            textarea.value = text;
-            textarea.style.position = 'fixed';
-            textarea.style.left = '-9999px';
-            document.body.appendChild(textarea);
-            textarea.select();
-            
+        function playSound(type) {
+            if (!soundEnabled) return;
             try {
-                const successful = document.execCommand('copy');
-                if (successful) {
-                    SoundFX.playSuccess();
-                    showToast('📋 已將格式化報表複製至剪貼簿！可直接貼至 LINE 群組', 'success');
-                } else {
-                    showToast('複製失敗，請手動選取複製', 'error');
+                initAudio();
+                if (!audioCtx) return;
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+
+                const now = audioCtx.currentTime;
+
+                if (type === 'paddle') {
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(300, now);
+                    osc.frequency.exponentialRampToValueAtTime(600, now + 0.1);
+                    gain.gain.setValueAtTime(0.15, now);
+                    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.1);
+                    osc.start(now);
+                    osc.stop(now + 0.1);
+                } else if (type === 'brick') {
+                    osc.type = 'triangle';
+                    osc.frequency.setValueAtTime(450, now);
+                    osc.frequency.exponentialRampToValueAtTime(800, now + 0.15);
+                    gain.gain.setValueAtTime(0.2, now);
+                    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.15);
+                    osc.start(now);
+                    osc.stop(now + 0.15);
+                } else if (type === 'powerup') {
+                    osc.type = 'square';
+                    osc.frequency.setValueAtTime(400, now);
+                    osc.frequency.setValueAtTime(600, now + 0.08);
+                    osc.frequency.setValueAtTime(880, now + 0.16);
+                    gain.gain.setValueAtTime(0.15, now);
+                    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.25);
+                    osc.start(now);
+                    osc.stop(now + 0.25);
+                } else if (type === 'lose') {
+                    osc.type = 'sawtooth';
+                    osc.frequency.setValueAtTime(250, now);
+                    osc.frequency.exponentialRampToValueAtTime(80, now + 0.4);
+                    gain.gain.setValueAtTime(0.3, now);
+                    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.4);
+                    osc.start(now);
+                    osc.stop(now + 0.4);
                 }
-            } catch (err) {
-                showToast('複製失敗：' + err, 'error');
-            } finally {
-                document.body.removeChild(textarea);
+            } catch (e) {
+                console.log('Audio error:', e);
             }
         }
 
-        // 17. 繪製 Toast 訊息提示燈
-        function showToast(message, type = 'info') {
-            const container = document.getElementById('toastContainer');
-            
-            const toast = document.createElement('div');
-            toast.className = `pointer-events-auto flex items-center justify-between p-4 rounded-xl shadow-lg border text-sm font-medium animate-slide-up transition duration-200`;
+        function toggleMute() {
+            soundEnabled = !soundEnabled;
+            soundBtn.className = soundEnabled ? "fa-solid fa-volume-high" : "fa-solid fa-volume-xmark text-rose-400";
+            showToast(soundEnabled ? "音效已開啟" : "音效已關閉");
+        }
 
-            if (type === 'success') {
-                toast.classList.add('bg-slate-900', 'text-emerald-400', 'border-emerald-500/30');
-            } else if (type === 'error') {
-                toast.classList.add('bg-slate-900', 'text-rose-400', 'border-rose-500/30');
-            } else {
-                toast.classList.add('bg-slate-900', 'text-indigo-300', 'border-indigo-500/30');
+        // --- Toast Notification ---
+        function showToast(text, iconClass = "fa-circle-check") {
+            const toast = document.getElementById('msgToast');
+            const msgText = document.getElementById('msgText');
+            const msgIcon = document.getElementById('msgIcon');
+            msgText.textContent = text;
+            msgIcon.className = `fa-solid ${iconClass} text-emerald-400 text-lg`;
+            toast.classList.remove('translate-y-20', 'opacity-0');
+            setTimeout(() => {
+                toast.classList.add('translate-y-20', 'opacity-0');
+            }, 2500);
+        }
+
+        // --- Game Initialization & Reset ---
+        function initBricks() {
+            bricks = [];
+            const totalWidthAvailable = VIRTUAL_WIDTH - (brickOffsetLeft * 2);
+            brickWidth = (totalWidthAvailable - (brickColumnCount - 1) * brickPadding) / brickColumnCount;
+
+            for (let c = 0; c < brickColumnCount; c++) {
+                bricks[c] = [];
+                for (let r = 0; r < brickRowCount; r++) {
+                    const colorConfig = brickColors[r % brickColors.length];
+                    bricks[c][r] = {
+                        x: c * (brickWidth + brickPadding) + brickOffsetLeft,
+                        y: r * (brickHeight + brickPadding) + brickOffsetTop,
+                        status: 1, // 1 = active, 0 = broken
+                        color: colorConfig,
+                        hasPowerUp: Math.random() < 0.18 // 18% chance to drop power-up
+                    };
+                }
+            }
+        }
+
+        function startGame() {
+            initAudio();
+            score = 0;
+            lives = 3;
+            level = 1;
+            updateHUD();
+            
+            startScreen.classList.add('hidden');
+            gameOverScreen.classList.add('hidden');
+            victoryScreen.classList.add('hidden');
+
+            resetLevel();
+            gameState = 'PLAYING';
+        }
+
+        function resetLevel() {
+            paddle.width = 120;
+            paddle.x = VIRTUAL_WIDTH / 2 - paddle.width / 2;
+            balls = [createBall()];
+            powerUps = [];
+            particles = [];
+            initBricks();
+        }
+
+        function nextLevel() {
+            level++;
+            updateHUD();
+            victoryScreen.classList.add('hidden');
+            resetLevel();
+            gameState = 'PLAYING';
+            showToast(`進入第 ${level} 關！球速加快！`, "fa-bolt");
+        }
+
+        function restartGame() {
+            gameOverScreen.classList.add('hidden');
+            victoryScreen.classList.add('hidden');
+            startGame();
+        }
+
+        function togglePause() {
+            if (gameState === 'PLAYING') {
+                gameState = 'PAUSED';
+                pauseScreen.classList.remove('hidden');
+                pauseIcon.className = "fa-solid fa-play";
+            } else if (gameState === 'PAUSED') {
+                gameState = 'PLAYING';
+                pauseScreen.classList.add('hidden');
+                pauseIcon.className = "fa-solid fa-pause";
+            }
+        }
+
+        function updateHUD() {
+            scoreEl.textContent = score;
+            livesEl.textContent = lives;
+            levelEl.textContent = level;
+            highScoreEl.textContent = highScore;
+        }
+
+        // --- Core Update Logic ---
+        function update() {
+            if (gameState !== 'PLAYING') return;
+
+            // Paddle Movement via Keyboard
+            if (rightPressed) {
+                paddle.targetX += paddle.speed * 1.5;
+            } else if (leftPressed) {
+                paddle.targetX -= paddle.speed * 1.5;
             }
 
-            toast.innerHTML = `
-                <div class="flex items-center space-x-2">
-                    <span>${message}</span>
-                </div>
-                <button onclick="this.parentElement.remove()" class="ml-4 text-slate-400 hover:text-white">
-                    <i class="fa-solid fa-xmark"></i>
-                </button>
-            `;
+            // Boundary check for paddle target
+            if (paddle.targetX < 10) paddle.targetX = 10;
+            if (paddle.targetX > VIRTUAL_WIDTH - paddle.width - 10) {
+                paddle.targetX = VIRTUAL_WIDTH - paddle.width - 10;
+            }
 
-            container.appendChild(toast);
+            // Smooth interpolation (lerp) towards targetX for buttery smooth feel
+            paddle.x += (paddle.targetX - paddle.x) * 0.3;
 
-            // 3.5 秒後自動消失
-            setTimeout(() => {
-                toast.style.opacity = '0';
-                toast.style.transform = 'translateY(20px)';
-                setTimeout(() => toast.remove(), 200);
-            }, 3500);
+            // Update Balls
+            for (let i = balls.length - 1; i >= 0; i--) {
+                let ball = balls[i];
+                
+                // Speed scaling with level
+                const speedMultiplier = 1 + (level - 1) * 0.12;
+                ball.x += ball.dx * speedMultiplier;
+                ball.y += ball.dy * speedMultiplier;
+
+                // Wall collisions (Left / Right)
+                if (ball.x - ball.radius < 0) {
+                    ball.x = ball.radius;
+                    ball.dx = -ball.dx;
+                    playSound('paddle');
+                } else if (ball.x + ball.radius > VIRTUAL_WIDTH) {
+                    ball.x = VIRTUAL_WIDTH - ball.radius;
+                    ball.dx = -ball.dx;
+                    playSound('paddle');
+                }
+
+                // Wall collision (Top)
+                if (ball.y - ball.radius < 0) {
+                    ball.y = ball.radius;
+                    ball.dy = -ball.dy;
+                    playSound('paddle');
+                }
+
+                // Paddle collision
+                if (
+                    ball.y + ball.radius >= paddle.y &&
+                    ball.y - ball.radius <= paddle.y + paddle.height &&
+                    ball.x >= paddle.x &&
+                    ball.x <= paddle.x + paddle.width
+                ) {
+                    ball.y = paddle.y - ball.radius; // Prevent sticking
+                    
+                    // Calculate reflection angle based on where it hit the paddle
+                    let hitPoint = ball.x - (paddle.x + paddle.width / 2);
+                    let normalizedHit = hitPoint / (paddle.width / 2); // -1 to 1
+                    let maxAngle = Math.PI / 3; // 60 degrees
+                    let angle = normalizedHit * maxAngle;
+                    
+                    let currentSpeed = Math.sqrt(ball.dx * ball.dx + ball.dy * ball.dy);
+                    ball.dx = currentSpeed * Math.sin(angle);
+                    ball.dy = -Math.abs(currentSpeed * Math.cos(angle)); // Ensure always bouncing up
+                    
+                    playSound('paddle');
+                    createParticles(ball.x, ball.y, '#3b82f6');
+                }
+
+                // Bottom boundary (Lose ball)
+                if (ball.y - ball.radius > VIRTUAL_HEIGHT) {
+                    balls.splice(i, 1);
+                    if (balls.length === 0) {
+                        lives--;
+                        updateHUD();
+                        playSound('lose');
+                        if (lives <= 0) {
+                            gameState = 'GAMEOVER';
+                            gameOverScreen.classList.remove('hidden');
+                            document.getElementById('finalScore').textContent = score;
+                            document.getElementById('finalHighScore').textContent = highScore;
+                        } else {
+                            // Reset single ball on paddle
+                            balls.push(createBall());
+                            paddle.x = VIRTUAL_WIDTH / 2 - paddle.width / 2;
+                            paddle.targetX = paddle.x;
+                        }
+                    }
+                }
+
+                // Brick collisions
+                let levelCleared = true;
+                for (let c = 0; c < brickColumnCount; c++) {
+                    for (let r = 0; r < brickRowCount; r++) {
+                        let b = bricks[c][r];
+                        if (b.status === 1) {
+                            levelCleared = false;
+                            // AABB collision check
+                            if (
+                                ball.x + ball.radius > b.x &&
+                                ball.x - ball.radius < b.x + brickWidth &&
+                                ball.y + ball.radius > b.y &&
+                                ball.y - ball.radius < b.y + brickHeight
+                            ) {
+                                ball.dy = -ball.dy;
+                                b.status = 0;
+                                score += b.color.points;
+
+                                if (score > highScore) {
+                                    highScore = score;
+                                    localStorage.setItem('neon_breakout_highscore', highScore);
+                                }
+                                updateHUD();
+                                playSound('brick');
+                                createParticles(b.x + brickWidth / 2, b.y + brickHeight / 2, b.color.fill);
+
+                                // Spawn power-up if brick had one
+                                if (b.hasPowerUp) {
+                                    const randomType = powerUpTypes[Math.floor(Math.random() * powerUpTypes.length)];
+                                    powerUps.push({
+                                        x: b.x + brickWidth / 2,
+                                        y: b.y + brickHeight / 2,
+                                        width: 28,
+                                        height: 28,
+                                        dy: 2.5,
+                                        config: randomType
+                                    });
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // Check victory condition
+                if (levelCleared) {
+                    gameState = 'VICTORY';
+                    victoryScreen.classList.remove('hidden');
+                    victoryTitle.textContent = `第 ${level} 關完美通關！`;
+                    victoryDesc.textContent = `得分：${score} 分！準備迎接下一挑戰。`;
+                    playSound('powerup');
+                    return;
+                }
+            }
+
+            // Update Power-ups
+            for (let i = powerUps.length - 1; i >= 0; i--) {
+                let p = powerUps[i];
+                p.y += p.dy;
+
+                // Check collision with paddle
+                if (
+                    p.x + p.width >= paddle.x &&
+                    p.x <= paddle.x + paddle.width &&
+                    p.y + p.height >= paddle.y &&
+                    p.y <= paddle.y + paddle.height
+                ) {
+                    // Apply power-up effect
+                    activatePowerUp(p.config.type);
+                    powerUps.splice(i, 1);
+                    continue;
+                }
+
+                // Remove if out of bounds
+                if (p.y > VIRTUAL_HEIGHT) {
+                    powerUps.splice(i, 1);
+                }
+            }
+
+            // Update Particles
+            for (let i = particles.length - 1; i >= 0; i--) {
+                let pt = particles[i];
+                pt.x += pt.dx;
+                pt.y += pt.dy;
+                pt.alpha -= pt.decay;
+                if (pt.alpha <= 0) {
+                    particles.splice(i, 1);
+                }
+            }
+        }
+
+        function activatePowerUp(type) {
+            playSound('powerup');
+            if (type === 'expand') {
+                paddle.width = Math.min(paddle.width + 40, 200);
+                showToast("獲得道具：寬板護具！", "fa-arrows-split-up-and-left");
+            } else if (type === 'multiball') {
+                if (balls.length > 0) {
+                    let parentBall = balls[0];
+                    balls.push(createBall(parentBall.x, parentBall.y, -parentBall.dx, parentBall.dy));
+                    balls.push(createBall(parentBall.x, parentBall.y, parentBall.dx * 0.8, parentBall.dy * 1.2));
+                }
+                showToast("獲得道具：多球分裂！", "fa-circle-dot");
+            } else if (type === 'life') {
+                lives++;
+                updateHUD();
+                showToast("獲得道具：生命加碼 +1！", "fa-heart");
+            }
+        }
+
+        // --- Render Graphics ---
+        function draw() {
+            // Clear Canvas
+            ctx.clearRect(0, 0, VIRTUAL_WIDTH, VIRTUAL_HEIGHT);
+
+            // Draw Background Grid Lines (Cyber Aesthetic)
+            ctx.strokeStyle = 'rgba(30, 41, 59, 0.3)';
+            ctx.lineWidth = 1;
+            for (let x = 0; x < VIRTUAL_WIDTH; x += 40) {
+                ctx.beginPath();
+                ctx.moveTo(x, 0);
+                ctx.lineTo(x, VIRTUAL_HEIGHT);
+                ctx.stroke();
+            }
+            for (let y = 0; y < VIRTUAL_HEIGHT; y += 40) {
+                ctx.beginPath();
+                ctx.moveTo(0, y);
+                ctx.lineTo(VIRTUAL_WIDTH, y);
+                ctx.stroke();
+            }
+
+            // Draw Bricks
+            for (let c = 0; c < brickColumnCount; c++) {
+                for (let r = 0; r < brickRowCount; r++) {
+                    let b = bricks[c][r];
+                    if (b.status === 1) {
+                        ctx.fillStyle = b.color.fill;
+                        ctx.strokeStyle = b.color.border;
+                        ctx.lineWidth = 2;
+
+                        // Rounded rectangle for brick
+                        drawRoundedRect(ctx, b.x, b.y, brickWidth, brickHeight, 5, true, true);
+
+                        // Inner glow highlight
+                        ctx.fillStyle = 'rgba(255, 255, 255, 0.25)';
+                        ctx.fillRect(b.x + 4, b.y + 3, brickWidth - 8, 4);
+
+                        // Indicator if brick has power-up
+                        if (b.hasPowerUp) {
+                            ctx.fillStyle = '#ffffff';
+                            ctx.beginPath();
+                            ctx.arc(b.x + brickWidth - 10, b.y + brickHeight / 2, 3, 0, Math.PI * 2);
+                            ctx.fill();
+                        }
+                    }
+                }
+            }
+
+            // Draw Paddle
+            ctx.fillStyle = '#3b82f6';
+            ctx.shadowColor = '#3b82f6';
+            ctx.shadowBlur = 15;
+            drawRoundedRect(ctx, paddle.x, paddle.y, paddle.width, paddle.height, 8, true, false);
+            
+            // Paddle inner highlight
+            ctx.fillStyle = '#93c5fd';
+            drawRoundedRect(ctx, paddle.x + 4, paddle.y + 2, paddle.width - 8, 4, 3, true, false);
+            ctx.shadowBlur = 0; // Reset shadow
+
+            // Draw Balls
+            for (let ball of balls) {
+                ctx.beginPath();
+                ctx.arc(ball.x, ball.y, ball.radius, 0, Math.PI * 2);
+                ctx.fillStyle = '#60a5fa';
+                ctx.shadowColor = '#60a5fa';
+                ctx.shadowBlur = 12;
+                ctx.fill();
+                ctx.closePath();
+                ctx.shadowBlur = 0;
+            }
+
+            // Draw Power-ups
+            for (let p of powerUps) {
+                ctx.save();
+                ctx.translate(p.x, p.y);
+                ctx.fillStyle = p.config.color;
+                ctx.shadowColor = p.config.color;
+                ctx.shadowBlur = 10;
+                ctx.beginPath();
+                ctx.arc(0, 0, p.width / 2, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.strokeStyle = '#ffffff';
+                ctx.lineWidth = 2;
+                ctx.stroke();
+                
+                // Draw icon letter/symbol
+                ctx.fillStyle = '#ffffff';
+                ctx.font = '12px FontAwesome';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText(p.config.name.substring(0, 1), 0, 0);
+                ctx.restore();
+            }
+
+            // Draw Particles
+            for (let pt of particles) {
+                ctx.save();
+                ctx.globalAlpha = pt.alpha;
+                ctx.fillStyle = pt.color;
+                ctx.beginPath();
+                ctx.arc(pt.x, pt.y, pt.radius, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.restore();
+            }
+        }
+
+        // Helper for Rounded Rectangles on Canvas
+        function drawRoundedRect(ctx, x, y, width, height, radius, fill, stroke) {
+            ctx.beginPath();
+            ctx.moveTo(x + radius, y);
+            ctx.lineTo(x + width - radius, y);
+            ctx.quadraticCurveTo(x + width, y, x + width, y + radius);
+            ctx.lineTo(x + width, y + height - radius);
+            ctx.quadraticCurveTo(x + width, y + height, x + width - radius, y + height);
+            ctx.lineTo(x + radius, y + height);
+            ctx.quadraticCurveTo(x, y + height, x, y + height - radius);
+            ctx.lineTo(x, y + radius);
+            ctx.quadraticCurveTo(x, y, x + radius, y);
+            ctx.closePath();
+            if (fill) ctx.fill();
+            if (stroke) ctx.stroke();
+        }
+
+        // --- Main Game Loop ---
+        function gameLoop() {
+            update();
+            draw();
+            requestAnimationFrame(gameLoop);
+        }
+
+        // Start animation loop on window load
+        window.onload = function() {
+            initBricks();
+            draw(); // Draw initial static screen
+            requestAnimationFrame(gameLoop);
+        };
+
+        // Modal Controls
+        function openInfoModal() {
+            if (gameState === 'PLAYING') togglePause();
+            document.getElementById('infoModal').classList.remove('hidden');
+        }
+
+        function closeInfoModal() {
+            document.getElementById('infoModal').classList.add('hidden');
         }
     </script>
 </body>
